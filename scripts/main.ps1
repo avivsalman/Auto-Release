@@ -1,4 +1,4 @@
-Write-Output '::group::Utilities'
+Write-Output '::group::Install - Utilities'
 Install-PSResource -Name Utilities -TrustRepository
 Write-Output '-------------------------------------------------'
 Get-PSResource -Name Utilities | Format-Table
@@ -11,17 +11,38 @@ Get-Alias | Where-Object Source -EQ 'Utilities' | Format-Table
 Write-Output '-------------------------------------------------'
 Write-Output '::endgroup::'
 
+Write-Output '::group::Install - powershell-yaml'
+Install-PSResource -Name powershell-yaml -TrustRepository
+Write-Output '-------------------------------------------------'
+Get-PSResource -Name powershell-yaml | Format-Table
+Write-Output '-------------------------------------------------'
+Write-Output 'Get commands'
+Get-Command -Module powershell-yaml | Format-Table
+Write-Output '-------------------------------------------------'
+Write-Output 'Get aliases'
+Get-Alias | Where-Object Source -EQ 'powershell-yaml' | Format-Table
+Write-Output '-------------------------------------------------'
+Write-Output '::endgroup::'
+
 Write-Output '::group::Environment variables'
 Get-ChildItem -Path Env: | Select-Object Name, Value | Sort-Object Name | Format-Table -AutoSize
 Write-Output '::endgroup::'
 
-$autoCleanup = $env:AutoCleanup -eq 'true'
-$autoPatching = $env:AutoPatching -eq 'true'
-$createMajorTag = $env:CreateMajorTag -eq 'true'
-$createMinorTag = $env:CreateMinorTag -eq 'true'
-$datePrereleaseFormat = $env:DatePrereleaseFormat
-$incrementalPrerelease = $env:IncrementalPrerelease -eq 'true'
-$versionPrefix = $env:VersionPrefix
+Write-Output '::group::Set configuration'
+if (-not (Test-Path -Path $env:ConfigurationFile -PathType Leaf)) {
+    Write-Output "Configuration file not found at [$env:ConfigurationFile]"
+} else {
+    Write-Output "Reading from configuration file [$env:ConfigurationFile]"
+    $configuration = ConvertFrom-Yaml -Yaml (Get-Content $env:ConfigurationFile -Raw)
+}
+
+$autoCleanup = ($configuration.AutoCleanup | IsNotNullOrEmpty) ? $configuration.AutoCleanup -eq 'true' : $env:AutoCleanup -eq 'true'
+$autoPatching = ($configuration.AutoPatching | IsNotNullOrEmpty) ? $configuration.AutoPatching -eq 'true' : $env:AutoPatching -eq 'true'
+$createMajorTag = ($configuration.CreateMajorTag | IsNotNullOrEmpty) ? $configuration.CreateMajorTag -eq 'true' : $env:CreateMajorTag -eq 'true'
+$createMinorTag = ($configuration.CreateMinorTag | IsNotNullOrEmpty) ? $configuration.CreateMinorTag -eq 'true' : $env:CreateMinorTag -eq 'true'
+$datePrereleaseFormat = ($configuration.DatePrereleaseFormat | IsNotNullOrEmpty) ? $configuration.DatePrereleaseFormat : $env:DatePrereleaseFormat
+$incrementalPrerelease = ($configuration.IncrementalPrerelease | IsNotNullOrEmpty) ? $configuration.IncrementalPrerelease -eq 'true' : $env:IncrementalPrerelease -eq 'true'
+$versionPrefix = ($configuration.VersionPrefix | IsNotNullOrEmpty) ? $configuration.VersionPrefix : $env:VersionPrefix
 
 Write-Output '-------------------------------------------------'
 Write-Output "Auto cleanup enabled:           [$autoCleanup]"
@@ -32,16 +53,17 @@ Write-Output "Date-based prerelease format:   [$datePrereleaseFormat]"
 Write-Output "Incremental prerelease enabled: [$incrementalPrerelease]"
 Write-Output "Version prefix:                 [$versionPrefix]"
 Write-Output '-------------------------------------------------'
+Write-Output '::endgroup::'
 
-$githubEventJson = Get-Content $env:GITHUB_EVENT_PATH
-$githubEvent = $githubEventJson | ConvertFrom-Json
-$pull_request = $githubEvent.pull_request
 
 Write-Output '::group::Event information - JSON'
+$githubEventJson = Get-Content $env:GITHUB_EVENT_PATH
 $githubEventJson | Format-List
 Write-Output '::endgroup::'
 
 Write-Output '::group::Event information - Object'
+$githubEvent = $githubEventJson | ConvertFrom-Json
+$pull_request = $githubEvent.pull_request
 $githubEvent | Format-List
 Write-Output '::endgroup::'
 
@@ -50,6 +72,7 @@ if (-not $isPullRequest) {
     'A release should not be created in this context. Exiting.'
     return
 }
+
 Write-Output '-------------------------------------------------'
 Write-Output "Is a pull request event:        [$isPullRequest]"
 Write-Output "Action type:                    [$($githubEvent.action)]"
@@ -74,51 +97,51 @@ $majorTags = @('major', 'breaking')
 $minorTags = @('minor', 'feature', 'improvement')
 $patchTags = @('patch', 'fix', 'bug')
 
+$createRelease = $pull_request.base.ref -eq 'main' -and ($pull_request.merged).ToString() -eq 'True'
+$closedPullRequest = $pull_request.state -eq 'closed' -and ($pull_request.merged).ToString() -eq 'False'
+$preRelease = $labels -Contains 'prerelease'
+$createPrerelease = $preRelease -and -not $createRelease -and -not $closedPullRequest
+
 $majorRelease = (Compare-Object -ReferenceObject $labels -DifferenceObject $majorTags -IncludeEqual -ExcludeDifferent).Count -gt 0
 $minorRelease = (Compare-Object -ReferenceObject $labels -DifferenceObject $minorTags -IncludeEqual -ExcludeDifferent).Count -gt 0 -and -not $majorRelease
 $patchRelease = (Compare-Object -ReferenceObject $labels -DifferenceObject $patchTags -IncludeEqual -ExcludeDifferent).Count -gt 0 -and -not $majorRelease -and -not $minorRelease
 
-$createRelease = $pull_request.base.ref -eq 'main' -and $pull_request.merged -eq 'True'
-$closedPullRequest = $pull_request.state -eq 'closed' -and $pull_request.merged -eq 'False'
-$preRelease = $labels -Contains 'prerelease'
-$createPrerelease = $preRelease -and -not $createRelease
-
 Write-Output '-------------------------------------------------'
+Write-Output "Create a release:               [$createRelease]"
+Write-Output "Create a prerelease:            [$createPrerelease]"
 Write-Output "Create a major release:         [$majorRelease]"
 Write-Output "Create a minor release:         [$minorRelease]"
 Write-Output "Create a patch release:         [$patchRelease]"
-Write-Output "Create a release:               [$createRelease]"
-Write-Output "Create a prerelease:            [$createPrerelease]"
 Write-Output "Closed pull request:            [$closedPullRequest]"
 Write-Output '-------------------------------------------------'
 
+Write-Output '::group::Get releases'
+$releases = gh release list --json 'createdAt,isDraft,isLatest,isPrerelease,name,publishedAt,tagName' | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0) {
+    Write-Error 'Failed to list all releases for the repo.'
+    exit $LASTEXITCODE
+}
+$releases | Select-Object -Property name, isPrerelease, isLatest, publishedAt | Format-Table
+Write-Output '::endgroup::'
+
+Write-Output '::group::Get latest version'
+$latestRelease = $releases | Where-Object { $_.isLatest -eq $true }
+$latestRelease | Format-List
+$latestVersionString = $latestRelease.tagName
+if ($latestVersionString | IsNotNullOrEmpty) {
+    $latestVersion = $latestVersionString | ConvertTo-SemVer
+    Write-Output '-------------------------------------------------'
+    Write-Output 'Latest version:'
+    $latestVersion | Format-Table
+    $latestVersion = '{0}{1}.{2}.{3}' -f $versionPrefix, $latestVersion.Major, $latestVersion.Minor, $latestVersion.Patch
+}
+Write-Output '::endgroup::'
+
+Write-Output '-------------------------------------------------'
+Write-Output "Latest version:                 [$latestVersion]"
+Write-Output '-------------------------------------------------'
+
 if ($createPrerelease -or $createRelease) {
-    Write-Output '::group::Get releases'
-    $releases = gh release list --json 'createdAt,isDraft,isLatest,isPrerelease,name,publishedAt,tagName' | ConvertFrom-Json
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error 'Failed to list all releases for the repo.'
-        exit $LASTEXITCODE
-    }
-    $releases | Format-List
-    Write-Output '::endgroup::'
-
-    Write-Output '::group::Get latest version'
-    $latestRelease = $releases | Where-Object { $_.isLatest -eq $true }
-    $latestRelease | Format-List
-    $latestVersionString = $latestRelease.tagName
-    if ($latestVersionString | IsNotNullOrEmpty) {
-        $latestVersion = $latestVersionString | ConvertTo-SemVer
-        Write-Output '-------------------------------------------------'
-        Write-Output 'Latest version:'
-        $latestVersion | Format-Table
-        $latestVersion = '{0}{1}.{2}.{3}' -f $versionPrefix, $latestVersion.Major, $latestVersion.Minor, $latestVersion.Patch
-    }
-    Write-Output '::endgroup::'
-
-    Write-Output '-------------------------------------------------'
-    Write-Output "Latest version:                 [$latestVersion]"
-    Write-Output '-------------------------------------------------'
-
     Write-Output '::group::Calculate new version'
     $version = $latestVersion | ConvertTo-SemVer
     $major = $version.Major
@@ -156,8 +179,9 @@ if ($createPrerelease -or $createRelease) {
         }
 
         if ($incrementalPrerelease) {
-            $prereleases = $releases | Where-Object { $_.tagName -like "$newVersion*" } | Sort-Object -Descending -Property tagName
-            Write-Output "Prereleases:                    [$($prereleases.count)]"
+            $prereleases = $releases | Where-Object { $_.tagName -like "$newVersion*" }
+            $prereleases | Select-Object -Property @{n = 'number'; e = { [int](($_.tagName -Split '\.')[-1]) } }, name, publishedAt, isPrerelease, isLatest | Format-Table
+
             if ($prereleases.count -gt 0) {
                 $latestPrereleaseVersion = ($prereleases[0].tagName | ConvertTo-SemVer) | Select-Object -ExpandProperty Prerelease
                 Write-Output "Latest prerelease:              [$latestPrereleaseVersion]"
@@ -191,47 +215,50 @@ if ($createPrerelease -or $createRelease) {
             Write-Error "Failed to create the release [$newVersion]."
             exit $LASTEXITCODE
         }
-        return
-    }
-
-    gh release create $newVersion --title $newVersion --generate-notes
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Failed to create the release [$newVersion]."
-        exit $LASTEXITCODE
-    }
-
-    if ($createMajorTag) {
-        $majorTag = ('{0}{1}' -f $versionPrefix, $major)
-        git tag -f $majorTag 'main'
+    } else {
+        gh release create $newVersion --title $newVersion --generate-notes
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "Failed to create major tag [$majorTag]."
+            Write-Error "Failed to create the release [$newVersion]."
             exit $LASTEXITCODE
         }
-    }
 
-    if ($createMinorTag) {
-        $minorTag = ('{0}{1}.{2}' -f $versionPrefix, $major, $minor)
-        git tag -f $minorTag 'main'
+        if ($createMajorTag) {
+            $majorTag = ('{0}{1}' -f $versionPrefix, $major)
+            git tag -f $majorTag 'main'
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error "Failed to create major tag [$majorTag]."
+                exit $LASTEXITCODE
+            }
+        }
+
+        if ($createMinorTag) {
+            $minorTag = ('{0}{1}.{2}' -f $versionPrefix, $major, $minor)
+            git tag -f $minorTag 'main'
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error "Failed to create minor tag [$minorTag]."
+                exit $LASTEXITCODE
+            }
+        }
+
+        git push origin --tags --force
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "Failed to create minor tag [$minorTag]."
+            Write-Error 'Failed to push tags.'
             exit $LASTEXITCODE
         }
+        Write-Output '::endgroup::'
     }
-
-    git push origin --tags --force
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error 'Failed to push tags.'
-        exit $LASTEXITCODE
-    }
-    Write-Output '::endgroup::'
-
+    Write-Output "::notice::Release created: [$newVersion]"
 } else {
     Write-Output 'Skipping release creation.'
 }
 
+Write-Output '::group::List prereleases using the same name'
+$prereleasesToCleanup = $releases | Where-Object { $_.tagName -like "*$preReleaseName*" }
+$prereleasesToCleanup | Select-Object -Property name, publishedAt, isPrerelease, isLatest | Format-Table
+Write-Output '::endgroup::'
+
 if (($closedPullRequest -or $createRelease) -and $autoCleanup) {
     Write-Output "::group::Cleanup prereleases for [$preReleaseName]"
-    $prereleasesToCleanup = $releases | Where-Object { $_.tagName -like "*$preReleaseName*" }
     foreach ($rel in $prereleasesToCleanup) {
         $relTagName = $rel.tagName
         Write-Output "Deleting prerelease:            [$relTagName]."

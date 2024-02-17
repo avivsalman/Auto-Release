@@ -14,6 +14,10 @@ inputs:
     description: Control wether to automatically handle patches. If disabled, the action will only create a patch release if the pull request has a 'patch' label.
     required: false
     default: 'true'
+  ConfigurationFile:
+    description: The path to the configuration file. Settings in the configuration file take precedence over the action inputs.
+    required: false
+    default: .github\auto-release.yml
   CreateMajorTag:
     description: Control wether to create a major tag when a pull request is merged into the main branch.
     required: false
@@ -43,6 +47,7 @@ runs:
       env:
         AutoCleanup: ${{ inputs.AutoCleanup }}
         AutoPatching: ${{ inputs.AutoPatching }}
+        ConfigurationFile: ${{ inputs.ConfigurationFile }}
         CreateMajorTag: ${{ inputs.CreateMajorTag }}
         CreateMinorTag: ${{ inputs.CreateMinorTag }}
         DatePrereleaseFormat: ${{ inputs.DatePrereleaseFormat }}
