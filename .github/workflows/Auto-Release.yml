@@ -16,6 +16,9 @@ on:
 concurrency:
   group: ${{ github.workflow }}
 
+permissions:
+  contents: write
+
 jobs:
   Auto-Release:
     runs-on: ubuntu-latest
@@ -27,3 +30,5 @@ jobs:
         uses: ./
         env:
           GH_TOKEN: ${{ github.token }} # Used for GitHub CLI authentication
+        with:
+          IncrementalPrerelease: false
