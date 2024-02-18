@@ -1,28 +1,27 @@
-Write-Output '::group::Install - Utilities'
-Install-PSResource -Name Utilities -TrustRepository
-Write-Output '-------------------------------------------------'
-Get-PSResource -Name Utilities | Format-Table
-Write-Output '-------------------------------------------------'
-Write-Output 'Get commands'
-Get-Command -Module Utilities | Format-Table
-Write-Output '-------------------------------------------------'
-Write-Output 'Get aliases'
-Get-Alias | Where-Object Source -EQ 'Utilities' | Format-Table
-Write-Output '-------------------------------------------------'
-Write-Output '::endgroup::'
+function Install-Dependency {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [string] $Name
+    )
 
-Write-Output '::group::Install - powershell-yaml'
-Install-PSResource -Name powershell-yaml -TrustRepository
-Write-Output '-------------------------------------------------'
-Get-PSResource -Name powershell-yaml | Format-Table
-Write-Output '-------------------------------------------------'
-Write-Output 'Get commands'
-Get-Command -Module powershell-yaml | Format-Table
-Write-Output '-------------------------------------------------'
-Write-Output 'Get aliases'
-Get-Alias | Where-Object Source -EQ 'powershell-yaml' | Format-Table
-Write-Output '-------------------------------------------------'
-Write-Output '::endgroup::'
+    foreach ($item in $Name) {
+        Write-Output "::group::Install - $item"
+        Install-PSResource -Name $item -TrustRepository
+        Write-Output '-------------------------------------------------'
+        Get-PSResource -Name $item | Format-Table
+        Write-Output '-------------------------------------------------'
+        Write-Output 'Get commands'
+        Get-Command -Module $item | Format-Table
+        Write-Output '-------------------------------------------------'
+        Write-Output 'Get aliases'
+        Get-Alias | Where-Object Source -EQ $item | Format-Table
+        Write-Output '-------------------------------------------------'
+        Write-Output '::endgroup::'
+    }
+}
+
+Install-Dependency -Name 'Utilities', 'powershell-yaml'
 
 Write-Output '::group::Environment variables'
 Get-ChildItem -Path Env: | Select-Object Name, Value | Sort-Object Name | Format-Table -AutoSize
@@ -45,6 +44,7 @@ $incrementalPrerelease = ($configuration.IncrementalPrerelease | IsNotNullOrEmpt
 $versionPrefix = ($configuration.VersionPrefix | IsNotNullOrEmpty) ? $configuration.VersionPrefix : $env:VersionPrefix
 $whatIf = ($configuration.WhatIf | IsNotNullOrEmpty) ? $configuration.WhatIf -eq 'true' : $env:WhatIf -eq 'true'
 
+$ignoreLabels = (($configuration.IgnoreLabels | IsNotNullOrEmpty) ? $configuration.IgnoreLabels : $env:IgnoreLabels) -split ',' | ForEach-Object { $_.Trim() }
 $majorLabels = (($configuration.MajorLabels | IsNotNullOrEmpty) ? $configuration.MajorLabels : $env:MajorLabels) -split ',' | ForEach-Object { $_.Trim() }
 $minorLabels = (($configuration.MinorLabels | IsNotNullOrEmpty) ? $configuration.MinorLabels : $env:MinorLabels) -split ',' | ForEach-Object { $_.Trim() }
 $patchLabels = (($configuration.PatchLabels | IsNotNullOrEmpty) ? $configuration.PatchLabels : $env:PatchLabels) -split ',' | ForEach-Object { $_.Trim() }
@@ -59,12 +59,12 @@ Write-Output "Incremental prerelease enabled: [$incrementalPrerelease]"
 Write-Output "Version prefix:                 [$versionPrefix]"
 Write-Output "What if mode:                   [$whatIf]"
 Write-Output ''
+Write-Output "Ignore labels:                  [$($ignoreLabels -join ', ')]"
 Write-Output "Major labels:                   [$($majorLabels -join ', ')]"
 Write-Output "Minor labels:                   [$($minorLabels -join ', ')]"
 Write-Output "Patch labels:                   [$($patchLabels -join ', ')]"
 Write-Output '-------------------------------------------------'
 Write-Output '::endgroup::'
-
 
 Write-Output '::group::Event information - JSON'
 $githubEventJson = Get-Content $env:GITHUB_EVENT_PATH
@@ -108,9 +108,15 @@ $closedPullRequest = $pull_request.state -eq 'closed' -and ($pull_request.merged
 $preRelease = $labels -Contains 'prerelease'
 $createPrerelease = $preRelease -and -not $createRelease -and -not $closedPullRequest
 
+$ignoreRelease = ($labels | Where-Object { $ignoreLabels -contains $_ }).Count -gt 0
 $majorRelease = ($labels | Where-Object { $majorLabels -contains $_ }).Count -gt 0
 $minorRelease = ($labels | Where-Object { $minorLabels -contains $_ }).Count -gt 0 -and -not $majorRelease
 $patchRelease = ($labels | Where-Object { $patchLabels -contains $_ }).Count -gt 0 -and -not $majorRelease -and -not $minorRelease
+
+if($ignoreRelease) {
+    Write-Output 'Ignoring release creation.'
+    return
+}
 
 Write-Output '-------------------------------------------------'
 Write-Output "Create a release:               [$createRelease]"
@@ -235,7 +241,7 @@ if ($createPrerelease -or $createRelease -or $whatIf) {
         } else {
             gh pr comment $pull_request.number -b "The release [$newVersion] has been created."
             if ($LASTEXITCODE -ne 0) {
-                Write-Error "Failed to comment on the pull request."
+                Write-Error 'Failed to comment on the pull request.'
                 exit $LASTEXITCODE
             }
         }
