@@ -1,4 +1,4 @@
-#REQUIRES -Modules Utilities, powershell-yaml
+﻿#REQUIRES -Modules Utilities, powershell-yaml
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
     'PSAvoidLongLines', '', Justification = 'Long ternary operators are used for readability.'
@@ -188,7 +188,7 @@ if ($createPrerelease -or $createRelease -or $whatIf) {
         }
 
         if ($incrementalPrerelease) {
-            $newVersion.BumpPrerelease()
+            $newVersion.BumpPrereleaseNumber()
         }
     }
     Stop-LogGroup
@@ -215,7 +215,7 @@ if ($createPrerelease -or $createRelease -or $whatIf) {
         if ($whatIf) {
             Write-Output "WhatIf: gh release create $newVersion --title $newVersion --target $prHeadRef --generate-notes --prerelease"
         } else {
-            gh release create $newVersion --title $newVersion --target $prHeadRef --generate-notes --prerelease
+            $releaseURL = gh release create $newVersion --title $newVersion --target $prHeadRef --generate-notes --prerelease
             if ($LASTEXITCODE -ne 0) {
                 Write-Error "Failed to create the release [$newVersion]."
                 exit $LASTEXITCODE
@@ -225,7 +225,7 @@ if ($createPrerelease -or $createRelease -or $whatIf) {
         if ($whatIf) {
             Write-Output 'WhatIf: gh pr comment $pull_request.number -b "The release [$newVersion] has been created."'
         } else {
-            gh pr comment $pull_request.number -b "The release [$newVersion] has been created."
+            gh pr comment $pull_request.number -b "The release [$newVersion]($releaseURL) has been created."
             if ($LASTEXITCODE -ne 0) {
                 Write-Error 'Failed to comment on the pull request.'
                 exit $LASTEXITCODE
@@ -243,7 +243,7 @@ if ($createPrerelease -or $createRelease -or $whatIf) {
         }
 
         if ($createMajorTag) {
-            $majorTag = ('{0}{1}' -f $versionPrefix, $major)
+            $majorTag = ('{0}{1}' -f $newVersion.Prefix, $newVersion.Major)
             if ($whatIf) {
                 Write-Output "WhatIf: git tag -f $majorTag 'main'"
             } else {
@@ -256,7 +256,7 @@ if ($createPrerelease -or $createRelease -or $whatIf) {
         }
 
         if ($createMinorTag) {
-            $minorTag = ('{0}{1}.{2}' -f $versionPrefix, $major, $minor)
+            $minorTag = ('{0}{1}.{2}' -f $newVersion.Prefix, $newVersion.Major, $newVersion.Minor)
             if ($whatIf) {
                 Write-Output "WhatIf: git tag -f $minorTag 'main'"
             } else {
@@ -291,7 +291,7 @@ $prereleasesToCleanup = $releases | Where-Object { $_.tagName -like "*$prereleas
 $prereleasesToCleanup | Select-Object -Property name, publishedAt, isPrerelease, isLatest | Format-Table
 Stop-LogGroup
 
-if (($closedPullRequest -or $createRelease) -and $autoCleanup -or $whatIf) {
+if ((($closedPullRequest -or $createRelease) -and $autoCleanup) -or $whatIf) {
     Start-LogGroup "Cleanup prereleases for [$prereleaseName]"
     foreach ($rel in $prereleasesToCleanup) {
         $relTagName = $rel.tagName
