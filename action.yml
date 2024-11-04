@@ -59,10 +59,15 @@ inputs:
     required: false
     default: 'false'
 
+outputs:
+  latest_version: ${{ steps.execute.outputs.latest_version }}
+  new_version: ${{ steps.execute.outputs.new_version }}
+
 runs:
   using: composite
   steps:
     - name: Auto-Release
+      id: execute
       shell: pwsh
       env:
         GITHUB_ACTION_INPUT_AutoCleanup: ${{ inputs.AutoCleanup }}

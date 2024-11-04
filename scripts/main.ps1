@@ -280,6 +280,9 @@ if ($createPrerelease -or $createRelease -or $whatIf) {
         Stop-LogGroup
     }
     Write-Output "::notice::Release created: [$newVersion]"
+
+    Write-Output "::set-output name=latest_version::$($latestVersion)"
+    Write-Output "::set-output name=new_version::$($newVersion)"
 } else {
     Write-Output 'Skipping release creation.'
 }
