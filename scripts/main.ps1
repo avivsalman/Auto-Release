@@ -281,8 +281,9 @@ if ($createPrerelease -or $createRelease -or $whatIf) {
     }
     Write-Output "::notice::Release created: [$newVersion]"
 
-    Write-Output "latest_version=$latestVersion" >> "$GITHUB_OUTPUT"
-    Write-Output "new_version=$newVersion" >> "$GITHUB_OUTPUT"
+    Write-Output "TEST"
+    Write-Output "latest_version=$latestVersion" >> $env:GITHUB_OUTPUT
+    Write-Output "new_version=$newVersion" >> $env:GITHUB_OUTPUT
 
     # Write-Output "::set-output name=latest_version::$($latestVersion)"
     # Write-Output "::set-output name=new_version::$($newVersion)"

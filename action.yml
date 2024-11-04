@@ -63,6 +63,7 @@ outputs:
   latest_version:
     description: >-
       test latest_version
+    value: ${{ steps.execute.outputs.latest_version }}
   new_version:
     description: >-
       test new_version
