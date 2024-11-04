@@ -60,8 +60,12 @@ inputs:
     default: 'false'
 
 outputs:
-  latest_version: ${{ steps.execute.outputs.latest_version }}
-  new_version: ${{ steps.execute.outputs.new_version }}
+  latest_version:
+    description: >-
+      test latest_version
+  new_version:
+    description: >-
+      test new_version
 
 runs:
   using: composite
