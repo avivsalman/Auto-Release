@@ -66,6 +66,7 @@ outputs:
   new_version:
     description: >-
       test new_version
+    value: ${{ steps.execute.outputs.new_version }}
 
 runs:
   using: composite
