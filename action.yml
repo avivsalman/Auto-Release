@@ -59,14 +59,17 @@ inputs:
     required: false
     default: 'false'
 outputs:
-  latest_version:
-    description: >-
-      test latest_version
-    value: ${{ fromJson(steps.execute.outputs.result).latest_version }}
-  new_version:
-    description: >-
-      test new_version
-    value: ${{ fromJson(steps.execute.outputs.result).new_version }}
+  result:
+    description: result outputs of the script (JSON)
+    value: ${{ steps.execute.outputs.result }}
+  # latest_version:
+  #   description: >-
+  #     test latest_version
+  #   value: ${{ fromJson(steps.execute.outputs.result).latest_version }}
+  # new_version:
+  #   description: >-
+  #     test new_version
+  #   value: ${{ fromJson(steps.execute.outputs.result).new_version }}
 runs:
   using: composite
   steps:
