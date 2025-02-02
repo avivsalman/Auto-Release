@@ -297,10 +297,13 @@ try {
             }
         }
         Write-GitHubNotice -Title 'Release created' -Message $newVersion
-        
+
         Write-Output "TEST"
-        Write-Output "latest_version=$latestVersion" >> $env:GITHUB_OUTPUT
-        Write-Output "new_version=$newVersion" >> $env:GITHUB_OUTPUT
+        # Write-Output "latest_version=$latestVersion" >> $env:GITHUB_OUTPUT
+        # Write-Output "new_version=$newVersion" >> $env:GITHUB_OUTPUT
+        Set-GitHubOutput -Name 'latest_version' -Value $latestVersion
+        Set-GitHubOutput -Name 'new_version' -Value $new_version
+        Write-Output "Set-GitHubOutput"
     } else {
         Write-Output 'Skipping release creation.'
     }
