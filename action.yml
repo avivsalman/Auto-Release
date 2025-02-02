@@ -58,11 +58,20 @@ inputs:
     description: If specified, the action will only log the changes it would make, but will not actually create or delete any releases or tags.
     required: false
     default: 'false'
-
+outputs:
+  latest_version:
+    description: >-
+      test latest_version
+    value: ${{ steps.execute.outputs.latest_version }}
+  new_version:
+    description: >-
+      test new_version
+    value: ${{ steps.execute.outputs.new_version }}
 runs:
   using: composite
   steps:
     - name: Auto-Release
+      id: execute
       uses: PSModule/GitHub-Script@v1
       env:
         GITHUB_ACTION_INPUT_AutoCleanup: ${{ inputs.AutoCleanup }}

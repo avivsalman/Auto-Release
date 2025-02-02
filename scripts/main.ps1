@@ -121,7 +121,8 @@ try {
         $labels | Format-List
     }
 
-    $createRelease = $isMerged -and $targetIsDefaultBranch
+    # $createRelease = $isMerged -and $targetIsDefaultBranch
+    $createRelease = $isMerged
     $closedPullRequest = $prIsClosed -and -not $isMerged
     $createPrerelease = $labels -Contains 'prerelease' -and -not $createRelease -and -not $closedPullRequest
     $prereleaseName = $prHeadRef -replace '[^a-zA-Z0-9]'
@@ -261,9 +262,9 @@ try {
                 if ($createMajorTag) {
                     $majorTag = ('{0}{1}' -f $newVersion.Prefix, $newVersion.Major)
                     if ($whatIf) {
-                        Write-Output "WhatIf: git tag -f $majorTag 'main'"
+                        Write-Output "WhatIf: git tag -f $majorTag '$prBaseRef'"
                     } else {
-                        git tag -f $majorTag 'main'
+                        git tag -f $majorTag $prBaseRef
                         if ($LASTEXITCODE -ne 0) {
                             Write-Error "Failed to create major tag [$majorTag]."
                             exit $LASTEXITCODE
@@ -274,9 +275,9 @@ try {
                 if ($createMinorTag) {
                     $minorTag = ('{0}{1}.{2}' -f $newVersion.Prefix, $newVersion.Major, $newVersion.Minor)
                     if ($whatIf) {
-                        Write-Output "WhatIf: git tag -f $minorTag 'main'"
+                        Write-Output "WhatIf: git tag -f $minorTag '$prBaseRef'"
                     } else {
-                        git tag -f $minorTag 'main'
+                        git tag -f $minorTag $prBaseRef
                         if ($LASTEXITCODE -ne 0) {
                             Write-Error "Failed to create minor tag [$minorTag]."
                             exit $LASTEXITCODE
@@ -296,6 +297,10 @@ try {
             }
         }
         Write-GitHubNotice -Title 'Release created' -Message $newVersion
+        
+        Write-Output "TEST"
+        Write-Output "latest_version=$latestVersion" >> $env:GITHUB_OUTPUT
+        Write-Output "new_version=$newVersion" >> $env:GITHUB_OUTPUT
     } else {
         Write-Output 'Skipping release creation.'
     }
