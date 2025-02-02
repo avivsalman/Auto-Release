@@ -95,11 +95,11 @@ runs:
       shell: pwsh
       env:
         out: ${{ toJson(steps.execute.outputs) }}
-        rel: ${{ steps.execute.outputs.new_version }}
-        test: ${{ toJson(steps.execute.outputs.new_version) }}
-        test2: ${{ toJson(steps.execute.outputs.result) }}
+        out2: ${{ toJson(steps.execute.outputs.result) }}
+        out3: ${{ steps.execute.outputs.result }}
+        out4: ${{ steps.execute.outputs.result.new_version }}
       run: |
-        echo "$rel"       
-        echo "$out"   
-        echo "$test"   
-        echo "$test2"   
+        echo "$out"       
+        echo "$out2"   
+        echo "$out3"   
+        echo "$out4"   
