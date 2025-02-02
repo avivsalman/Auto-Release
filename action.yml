@@ -91,3 +91,14 @@ runs:
         Script: |
           # Auto-Release
           . "${{ github.action_path }}\scripts\main.ps1"
+    - name: Print
+      env:
+        out: ${{ toJson(steps.execute.outputs) }}
+        rel: ${{ steps.execute.outputs.new_version }}
+        test: ${{ toJson(steps.execute.outputs.new_version) }}
+        test2: ${{ toJson(steps.execute.outputs.result) }}
+      run: |
+        echo "$rel"       
+        echo "$out"   
+        echo "$test"   
+        echo "$test2"   
