@@ -92,6 +92,7 @@ runs:
           # Auto-Release
           . "${{ github.action_path }}\scripts\main.ps1"
     - name: Print
+      shell: pwsh
       env:
         out: ${{ toJson(steps.execute.outputs) }}
         rel: ${{ steps.execute.outputs.new_version }}
