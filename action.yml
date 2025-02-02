@@ -97,7 +97,7 @@ runs:
         out: ${{ toJson(steps.execute.outputs) }}
         out2: ${{ toJson(steps.execute.outputs.result) }}
         out3: ${{ steps.execute.outputs.result }}
-        out4: ${{ steps.execute.outputs.result.new_version }}
+        out4: ${{ fromJson(steps.execute.outputs.result).new_version }}
       run: |
         echo "$out"       
         echo "$out2"   
