@@ -252,6 +252,10 @@ try {
                 if ($whatIf) {
                     Write-Output "WhatIf: gh release create $newVersion --title $newVersion --generate-notes"
                 } else {
+
+                    Write-Output "create relaese aviv:                    [$newVersion]"
+
+
                     gh release create $newVersion --title $newVersion --generate-notes
                     if ($LASTEXITCODE -ne 0) {
                         Write-Error "Failed to create the release [$newVersion]."
@@ -288,12 +292,18 @@ try {
                 if ($whatIf) {
                     Write-Output 'WhatIf: git push origin --tags --force'
                 } else {
+                    Write-Output "git push origin --tags --force START"
+
+
                     git push origin --tags --force
                     if ($LASTEXITCODE -ne 0) {
                         Write-Error 'Failed to push tags.'
                         exit $LASTEXITCODE
                     }
                 }
+
+                Write-Output "git push origin --tags --force DONE"
+
             }
         }
         Write-GitHubNotice -Title 'Release created' -Message $newVersion
