@@ -96,8 +96,12 @@ try {
     $actionType = $githubEvent.action
     $isMerged = ($pull_request.merged).ToString() -eq 'True'
     $prIsClosed = $pull_request.state -eq 'closed'
-    $prBaseRef = $pull_request.base.ref
-    $prHeadRef = $pull_request.head.ref
+    # $prBaseRef = $pull_request.base.ref
+    # $prHeadRef = $pull_request.head.ref
+
+    $prBaseRef = $pull_request.base.sha
+    $prHeadRef = $pull_request.head.sha
+
     $targetIsDefaultBranch = $pull_request.base.ref -eq $defaultBranchName
 
     Write-Output '-------------------------------------------------'
