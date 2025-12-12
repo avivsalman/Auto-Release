@@ -263,6 +263,10 @@ try {
                     }
                 }
 
+
+                Write-Output "createMajorTag:                    [$createMajorTag]"
+
+
                 if ($createMajorTag) {
                     $majorTag = ('{0}{1}' -f $newVersion.Prefix, $newVersion.Major)
                     if ($whatIf) {
@@ -288,6 +292,8 @@ try {
                         }
                     }
                 }
+
+                Write-Output "create relaese aviv:                    [$newVersion]"
 
                 if ($whatIf) {
                     Write-Output 'WhatIf: git push origin --tags --force'
